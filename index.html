@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulador de Cargas Puntuales</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<header>
+  <div class="logo">⚡ Simulador de <span>Cargas Puntuales</span></div>
+  <div class="mode-tabs">
+    <button class="mode-tab active" onclick="setMode('2D')">2D</button>
+    <button class="mode-tab" onclick="setMode('1D')">1D</button>
+  </div>
+  <div style="font-size:0.65rem; color:var(--muted);">k = 8.99×10⁹ N·m²/C²</div>
+</header>
+
+<div class="app">
+
+  <div class="panel">
+    <div class="panel-title">Añadir Carga</div>
+
+    <label>Tipo de carga</label>
+    <div class="charge-type-selector">
+      <button class="charge-btn pos active" id="btnPos" onclick="selectType(1)">＋ Positiva</button>
+      <button class="charge-btn neg" id="btnNeg" onclick="selectType(-1)">－ Negativa</button>
+    </div>
+
+    <label>Magnitud (nC)</label>
+    <input type="number" id="chargeVal" value="1" min="0.01" step="0.1">
+
+    <div id="coords2D">
+      <label>Posición X (m)</label>
+      <input type="number" id="posX" value="0" step="0.1">
+      <label>Posición Y (m)</label>
+      <input type="number" id="posY" value="0" step="0.1">
+    </div>
+
+    <div id="coords1D" style="display:none">
+      <label>Posición X (m)</label>
+      <input type="number" id="posX1D" value="0" step="0.1">
+    </div>
+
+    <button class="add-btn" onclick="addCharge()">+ Agregar Carga</button>
+
+    <div class="separator"></div>
+
+    <div class="panel-title">Cargas del Sistema</div>
+    <div class="charge-list" id="chargeList"></div>
+
+    <div class="separator"></div>
+
+    <div class="panel-title">Visualización</div>
+    <div class="toggle-row">
+      <span class="toggle-label">Campo eléctrico</span>
+      <button class="toggle on" id="toggleField" onclick="toggleOpt('field')"></button>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">Vectores de fuerza</span>
+      <button class="toggle on" id="toggleForce" onclick="toggleOpt('force')"></button>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">Líneas de campo</span>
+      <button class="toggle on" id="toggleLines" onclick="toggleOpt('lines')"></button>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">Mapa de potencial</span>
+      <button class="toggle" id="togglePotential" onclick="toggleOpt('potential')"></button>
+    </div>
+
+    <div class="separator"></div>
+    <label>Densidad del campo</label>
+    <input type="range" id="fieldDensity" min="3" max="12" value="6" oninput="render()">
+  </div>
+
+  <div class="canvas-area" id="canvasArea">
+    <canvas id="canvas2D"></canvas>
+    <canvas id="canvas1D" style="display:none"></canvas>
+
+    <div class="statusbar" id="statusbar">
+      Haz clic para colocar una carga · Arrastra para mover
+    </div>
+
+    <div class="canvas-overlay">
+      <button class="overlay-btn" onclick="zoomIn()">＋ Zoom</button>
+      <button class="overlay-btn" onclick="zoomOut()">－ Zoom</button>
+      <button class="overlay-btn" onclick="resetView()">⌂ Reset</button>
+      <button class="overlay-btn" onclick="exportCanvas()">↓ PNG</button>
+      <button class="overlay-btn danger" onclick="clearCharges()">✕ Limpiar</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Resultados</div>
+
+    <div class="result-block">
+      <div class="result-title">Carga seleccionada</div>
+      <div class="result-value" id="selCharge">—</div>
+      <div class="result-unit">Selecciona una carga en la lista</div>
+    </div>
+
+    <div class="result-block">
+      <div class="result-title">Fuerza neta</div>
+      <div class="result-value" id="netForceMag">—</div>
+      <div class="result-unit" id="netForceUnit">N</div>
+    </div>
+
+    <div class="result-block" id="forceComponents">
+      <div class="result-title">Componentes de fuerza neta</div>
+      <div class="vector-row"><span class="vector-label">Fx</span><span class="vector-val" id="fx">—</span></div>
+      <div class="vector-row"><span class="vector-label">Fy</span><span class="vector-val" id="fy">—</span></div>
+      <div class="vector-row"><span class="vector-label">θ</span><span class="vector-val" id="fangle">—</span></div>
+    </div>
+
+    <div class="separator"></div>
+
+    <div class="panel-title">Campo en punto sonda</div>
+    <div class="probe-info" id="probeInfo">
+      Mantén <b style="color:var(--accent-gold)">Shift</b> y haz clic en el canvas para medir el campo en cualquier punto.
+    </div>
+
+    <div class="result-block" style="margin-top:10px">
+      <div class="result-title">|E| en punto sonda</div>
+      <div class="result-value" id="probeE">—</div>
+      <div class="result-unit">N/C</div>
+    </div>
+
+    <div class="result-block">
+      <div class="result-title">Componentes E sonda</div>
+      <div class="vector-row"><span class="vector-label">Ex</span><span class="vector-val" id="probeEx">—</span></div>
+      <div class="vector-row"><span class="vector-label">Ey</span><span class="vector-val" id="probeEy">—</span></div>
+      <div class="vector-row"><span class="vector-label">θ</span><span class="vector-val" id="probeAngle">—</span></div>
+    </div>
+
+    <div class="separator"></div>
+
+    <div class="panel-title">Pares de fuerzas (Coulomb)</div>
+    <div id="pairForces" style="font-size:0.68rem; color:var(--muted);">
+      Agrega al menos 2 cargas para ver las fuerzas entre pares.
+    </div>
+
+    <div class="separator"></div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent-pos)"></div> Positiva</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent-neg)"></div> Negativa</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent-gold)"></div> Seleccionada</div>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js" defer></script>
+<script src="js/physics.js" defer></script>
+<script src="js/render.js" defer></script>
+<script src="js/ui.js" defer></script>
+<script src="js/events.js" defer></script>
+
+</body>
+</html>
